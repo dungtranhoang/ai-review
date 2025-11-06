@@ -7,5 +7,9 @@ RUN apt-get update && \
     apt-get install -y bash ca-certificates curl git libexpat1 openssh-client && \
     rm -rf /var/lib/apt/lists/*
 
-ARG AI_REVIEW_VERSION
-RUN pip install --no-cache-dir xai-review==${AI_REVIEW_VERSION}
+# Copy the local source code instead of installing from PyPI
+COPY . /app
+RUN pip install --no-cache-dir -e .
+
+# Set the entrypoint to use the local ai-review command
+ENTRYPOINT ["python", "-m", "ai_review.cli.main"]

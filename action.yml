@@ -1,30 +1,16 @@
-name: 'XAI Review'
-author: 'Nikita Filonov'
+name: 'AI Review with Gitea Inline Support'
+author: 'dungtranhoang'
 branding:
   icon: 'eye'
-  color: 'purple'
-description: '🚀 AI-powered code review tool'
+  color: 'blue'
+description: '🚀 AI-powered code review with improved Gitea inline comments and JSON parsing'
 
 inputs:
   review-command:
     default: 'run'
     required: false
-    description: 'Which review mode to run (run, run-inline, run-summary, run-context)'
+    description: 'Which review mode to run (run, run-inline, run-summary, run-context, run-inline-reply, run-summary-reply)'
 
 runs:
-  using: 'composite'
-  steps:
-    - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12'
-
-    - name: Install XAI Review
-      run: pip install --no-cache-dir xai-review==0.39.0
-      shell: bash
-
-    - name: Run AI Review
-      run: |
-        ai-review show-config
-        ai-review ${{ inputs.review-command }}
-      shell: bash
+  using: 'docker'
+  image: 'Dockerfile'
