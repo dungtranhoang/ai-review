@@ -1,6 +1,8 @@
-Return ONLY a valid JSON array of inline review comments.
+YOU MUST RESPOND ONLY IN ENGLISH AND ONLY WITH VALID JSON.
 
-Format:
+Return ONLY a valid JSON array of inline review comments. Do not include any other text, explanations, or markdown formatting.
+
+REQUIRED FORMAT:
 
 ```json
 [
@@ -13,13 +15,17 @@ Format:
 ]
 ```
 
-Rules:
+STRICT RULES:
 
-- "file" must exactly match the file path in the diff.
-- "line" must be an integer from the new version of the file.
-- "message" must be a short, clear, and actionable explanation (1 sentence).
-- "suggestion" must contain ONLY the code to replace the line(s), without markdown or comments.
-    - Use correct indentation from the file.
-    - If no concrete replacement is appropriate, set "suggestion" to null.
-- Do not include anything outside the JSON array.
-- If no issues are found, return [].
+- RESPOND ONLY IN ENGLISH - never use Chinese or any other language
+- OUTPUT ONLY THE JSON ARRAY - no other text before, after, or around it
+- "file" must exactly match the file path in the diff
+- "line" must be an integer from the new version of the file
+- "message" must be a short, clear, and actionable explanation (1 sentence, in English)
+- "suggestion" must contain ONLY the code to replace the line(s), without markdown or comments
+    - Use correct indentation from the file
+    - If no concrete replacement is appropriate, set "suggestion" to null
+- If no issues are found, return []
+
+EXAMPLE VALID RESPONSE:
+[{"file": "src/main.py", "line": 15, "message": "Variable 'unused_var' is declared but never used.", "suggestion": null}]

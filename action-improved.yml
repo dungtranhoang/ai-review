@@ -1,0 +1,17 @@
+name: 'AI Review with Gitea Inline Support'
+description: 'AI-powered code review with improved Gitea inline comments'
+author: 'Your Name'
+
+inputs:
+  review-command:
+    description: 'Review command to execute'
+    required: false
+    default: 'run'
+
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+
+branding:
+  icon: 'eye'
+  color: 'blue'

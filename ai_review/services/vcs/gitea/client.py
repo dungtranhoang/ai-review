@@ -1,5 +1,8 @@
 from ai_review.clients.gitea.client import get_gitea_http_client
-from ai_review.clients.gitea.pr.schema.comments import GiteaCreateCommentRequestSchema
+from ai_review.clients.gitea.pr.schema.comments import (
+    GiteaCreateCommentRequestSchema,
+    GiteaCreateReviewCommentRequestSchema
+)
 from ai_review.config import settings
 from ai_review.libs.logger import get_logger
 from ai_review.services.vcs.gitea.adapter import (
@@ -70,13 +73,21 @@ class GiteaVCSClient(VCSClientProtocol):
             return []
 
     async def get_inline_comments(self) -> list[ReviewCommentSchema]:
-        comments = await self.get_general_comments()
-        if comments:
-            logger.warning(
-                f"Gitea API does not support inline comments — "
-                f"returning {len(comments)} general comments as fallback inline comments"
+        try:
+            response = await self.http_client.pr.get_review_comments(
+                owner=self.owner, repo=self.repo, pull_number=self.pull_number
             )
-        return comments
+            logger.info(f"Fetched {len(response.root)} inline comments for {self.pull_request_ref}")
+            return [get_review_comment_from_gitea_comment(comment) for comment in response.root]
+        except Exception as error:
+            logger.warning(f"Failed to fetch inline comments for {self.pull_request_ref}: {error}")
+            # Fallback to general comments
+            comments = await self.get_general_comments()
+            if comments:
+                logger.warning(
+                    f"Falling back to {len(comments)} general comments as inline comments"
+                )
+            return comments
 
     async def create_general_comment(self, message: str) -> None:
         try:
@@ -94,12 +105,27 @@ class GiteaVCSClient(VCSClientProtocol):
             raise
 
     async def create_inline_comment(self, file: str, line: int, message: str) -> None:
-        fallback_message = f"[{file}:{line}] {message}"
-        logger.warning(
-            f"Gitea does not support inline comments. "
-            f"Falling back to general comment: {fallback_message}"
-        )
-        await self.create_general_comment(fallback_message)
+        try:
+            logger.info(f"Creating inline comment on {file}:{line} in PR {self.pull_request_ref}: {message}")
+            request = GiteaCreateReviewCommentRequestSchema(
+                body=message,
+                path=file,
+                line=line,
+                side="RIGHT"
+            )
+            await self.http_client.pr.create_review_comment(
+                owner=self.owner,
+                repo=self.repo,
+                pull_number=self.pull_number,
+                request=request,
+            )
+            logger.info(f"Created inline comment on {file}:{line} in PR {self.pull_request_ref}")
+        except Exception as error:
+            logger.warning(f"Failed to create inline comment on {file}:{line}: {error}")
+            # Fallback to general comment
+            fallback_message = f"**{file}:{line}** - {message}"
+            logger.warning(f"Falling back to general comment: {fallback_message}")
+            await self.create_general_comment(fallback_message)
 
     async def create_inline_reply(self, thread_id: int | str, message: str) -> None:
         logger.warning("Gitea does not support threaded replies — posting new general comment instead")

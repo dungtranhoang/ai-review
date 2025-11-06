@@ -5,7 +5,11 @@ from ai_review.clients.gitea.pr.schema.comments import (
     GiteaGetPRCommentsQuerySchema,
     GiteaGetPRCommentsResponseSchema,
     GiteaCreateCommentRequestSchema,
-    GiteaCreateCommentResponseSchema
+    GiteaCreateCommentResponseSchema,
+    GiteaCreateReviewCommentRequestSchema,
+    GiteaCreateReviewCommentResponseSchema,
+    GiteaGetReviewCommentsQuerySchema,
+    GiteaGetReviewCommentsResponseSchema
 )
 from ai_review.clients.gitea.pr.schema.files import (
     GiteaPRFileSchema,
@@ -69,6 +73,32 @@ class GiteaPullRequestsHTTPClient(HTTPClient, GiteaPullRequestsHTTPClientProtoco
             json=request.model_dump(),
         )
 
+    @handle_http_error(client="GiteaPullRequestsHTTPClient", exception=GiteaPullRequestsHTTPClientError)
+    async def get_review_comments_api(
+            self,
+            owner: str,
+            repo: str,
+            pull_number: str,
+            query: GiteaGetReviewCommentsQuerySchema
+    ) -> Response:
+        return await self.get(
+            f"/repos/{owner}/{repo}/pulls/{pull_number}/comments",
+            query=QueryParams(**query.model_dump())
+        )
+
+    @handle_http_error(client="GiteaPullRequestsHTTPClient", exception=GiteaPullRequestsHTTPClientError)
+    async def create_review_comment_api(
+            self,
+            owner: str,
+            repo: str,
+            pull_number: str,
+            request: GiteaCreateReviewCommentRequestSchema
+    ) -> Response:
+        return await self.post(
+            f"/repos/{owner}/{repo}/pulls/{pull_number}/comments",
+            json=request.model_dump(exclude_none=True),
+        )
+
     async def get_pull_request(self, owner: str, repo: str, pull_number: str) -> GiteaGetPRResponseSchema:
         response = await self.get_pull_request_api(owner, repo, pull_number)
         return GiteaGetPRResponseSchema.model_validate_json(response.text)
@@ -116,3 +146,30 @@ class GiteaPullRequestsHTTPClient(HTTPClient, GiteaPullRequestsHTTPClientProtoco
     ) -> GiteaCreateCommentResponseSchema:
         response = await self.create_comment_api(owner, repo, pull_number, request)
         return GiteaCreateCommentResponseSchema.model_validate_json(response.text)
+
+    async def get_review_comments(self, owner: str, repo: str, pull_number: str) -> GiteaGetReviewCommentsResponseSchema:
+        async def fetch_page(page: int) -> Response:
+            query = GiteaGetReviewCommentsQuerySchema(page=page, per_page=settings.vcs.pagination.per_page)
+            return await self.get_review_comments_api(owner, repo, pull_number, query)
+
+        def extract_items(response: Response) -> list[GiteaPRCommentSchema]:
+            result = GiteaGetReviewCommentsResponseSchema.model_validate_json(response.text)
+            return result.root
+
+        items = await paginate(
+            max_pages=settings.vcs.pagination.max_pages,
+            fetch_page=fetch_page,
+            extract_items=extract_items,
+            has_next_page=gitea_has_next_page
+        )
+        return GiteaGetReviewCommentsResponseSchema(root=items)
+
+    async def create_review_comment(
+            self,
+            owner: str,
+            repo: str,
+            pull_number: str,
+            request: GiteaCreateReviewCommentRequestSchema
+    ) -> GiteaCreateReviewCommentResponseSchema:
+        response = await self.create_review_comment_api(owner, repo, pull_number, request)
+        return GiteaCreateReviewCommentResponseSchema.model_validate_json(response.text)

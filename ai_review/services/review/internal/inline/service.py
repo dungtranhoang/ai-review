@@ -20,6 +20,13 @@ class InlineCommentService(InlineCommentServiceProtocol):
             logger.warning("LLM returned empty string for inline review")
             return InlineCommentListSchema(root=[])
 
+        # Log the raw output for debugging
+        logger.debug(f"Raw LLM output (first 200 chars): {output[:200]}")
+
+        # Check if output contains non-English characters
+        if any(ord(char) > 127 for char in output[:100]):
+            logger.warning("LLM output contains non-English characters, likely not following JSON format")
+
         if parsed := self.parser.parse_output(output):
             return parsed
 
@@ -37,4 +44,17 @@ class InlineCommentService(InlineCommentServiceProtocol):
         else:
             logger.error("No JSON array found in LLM output")
 
+        # Additional fallback: try to find any JSON-like structure
+        logger.warning("Attempting additional JSON extraction methods...")
+        
+        # Try to find content between [ and ]
+        bracket_match = re.search(r'\[.*?\]', output, re.DOTALL)
+        if bracket_match:
+            bracket_content = bracket_match.group(0)
+            logger.debug(f"Found bracket content: {bracket_content[:100]}...")
+            if parsed := self.parser.try_parse(bracket_content):
+                logger.info("Successfully parsed JSON from bracket extraction")
+                return parsed
+
+        logger.error(f"All JSON parsing attempts failed. Raw output: {output[:500]}")
         return InlineCommentListSchema(root=[])
