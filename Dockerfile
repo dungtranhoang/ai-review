@@ -11,5 +11,5 @@ RUN apt-get update && \
 COPY . /app
 RUN pip install --no-cache-dir -e .
 
-# Set the entrypoint to use the local ai-review command
-ENTRYPOINT ["python", "-m", "ai_review.cli.main"]
+# Set the entrypoint to use the installed ai-review command
+ENTRYPOINT ["ai-review"]

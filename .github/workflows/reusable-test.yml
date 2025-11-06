@@ -34,6 +34,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml
           verbose: true
-          fail_ci_if_error: true
+          fail_ci_if_error: false  # Don't fail if Codecov upload fails
+        continue-on-error: true    # Continue even if this step fails
 
     runs-on: ubuntu-latest
