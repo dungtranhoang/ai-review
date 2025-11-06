@@ -1,9 +1,11 @@
 name: 🚀 Publish
 
 on:
-  push:
-    tags:
-      - 'v*'
+  # Disabled for fork - only manual trigger
+  workflow_dispatch:
+  # push:
+  #   tags:
+  #     - 'v*'
 
 jobs:
   lint:

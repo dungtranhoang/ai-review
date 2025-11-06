@@ -31,4 +31,5 @@ jobs:
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        continue-on-error: true  # Don't fail if PyPI upload fails
     runs-on: ubuntu-latest
